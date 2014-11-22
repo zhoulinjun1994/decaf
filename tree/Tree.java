@@ -6,13 +6,10 @@
  */
 package decaf.tree;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import decaf.*;
-import decaf.type.*;
-import decaf.scope.*;
-import decaf.symbol.*;
-import decaf.symbol.Class;
 import decaf.utils.IndentPrintWriter;
 import decaf.utils.MiscUtils;
 
@@ -82,11 +79,12 @@ public abstract class Tree {
      * Do-while loops, of type DoLoop.
      */
     public static final int DOLOOP = BLOCK + 1;
+    public static final int REPEATUNTIL = DOLOOP + 1;
 
     /**
      * While-loops, of type WhileLoop.
      */
-    public static final int WHILELOOP = DOLOOP + 1;
+    public static final int WHILELOOP = REPEATUNTIL + 1;
 
     /**
      * For-loops, of type ForLoop.
@@ -107,11 +105,14 @@ public abstract class Tree {
      * Case parts in switch statements, of type Case.
      */
     public static final int CASE = SWITCH + 1;
+    public static final int CASESTMT = SWITCH + 1;
+    public static final int DEFAULT = CASESTMT + 1;
+    public static final int DEFAULTSTMT = DEFAULT + 1;
 
     /**
      * Synchronized statements, of type Synchonized.
      */
-    public static final int SYNCHRONIZED = CASE + 1;
+    public static final int SYNCHRONIZED = DEFAULT + 1;
 
     /**
      * Try statements, of type Try.
@@ -287,8 +288,12 @@ public abstract class Tree {
     public static final int MUL = MINUS + 1;
     public static final int DIV = MUL + 1;
     public static final int MOD = DIV + 1;
+    /**
+     * Trinary operators, of type Trinary.
+     */
+    public static final int TRIOP = MOD + 1;
 
-    public static final int NULL = MOD + 1;
+    public static final int NULL = TRIOP + 1;
     public static final int CALLEXPR = NULL + 1;
     public static final int THISEXPR = CALLEXPR + 1;
     public static final int READINTEXPR = THISEXPR + 1;
@@ -305,7 +310,6 @@ public abstract class Tree {
 
 
     public Location loc;
-    public Type type;
     public int tag;
 
     /**
@@ -317,17 +321,10 @@ public abstract class Tree {
         this.loc = loc;
     }
 
+
 	public Location getLocation() {
 		return loc;
 	}
-
-    /**
-      * Set type field and return this tree.
-      */
-    public Tree setType(Type type) {
-        this.type = type;
-        return this;
-    }
 
     /**
       * Visit this tree with a given visitor.
@@ -341,8 +338,6 @@ public abstract class Tree {
     public static class TopLevel extends Tree {
 
 		public List<ClassDef> classes;
-		public Class main;
-		public GlobalScope globalScope;
 		
 		public TopLevel(List<ClassDef> classes, Location loc) {
 			super(TOPLEVEL, loc);
@@ -370,7 +365,6 @@ public abstract class Tree {
     	public String name;
     	public String parent;
     	public List<Tree> fields;
-    	public Class symbol;
 
         public ClassDef(String name, String parent, List<Tree> fields,
     			Location loc) {
@@ -404,7 +398,6 @@ public abstract class Tree {
     	public TypeLiteral returnType;
     	public List<VarDef> formals;
     	public Block body;
-    	public Function symbol;
     	
         public MethodDef(boolean statik, String name, TypeLiteral returnType,
         		List<VarDef> formals, Block body, Location loc) {
@@ -444,7 +437,6 @@ public abstract class Tree {
     	
     	public String name;
     	public TypeLiteral type;
-    	public Variable symbol;
 
         public VarDef(String name, TypeLiteral type, Location loc) {
             super(VARDEF, loc);
@@ -488,8 +480,7 @@ public abstract class Tree {
     public static class Block extends Tree {
 
     	public List<Tree> block;
-    	public LocalScope associatedScope;
-
+ 
         public Block(List<Tree> block, Location loc) {
             super(BLOCK, loc);
     		this.block = block;
@@ -587,6 +578,36 @@ public abstract class Tree {
     		pw.decIndent();
     	}
    }
+    
+    public static class RepeatUntil extends Tree {
+
+    	public Tree left;
+    	public Expr condition;
+
+        public RepeatUntil(Tree left, Expr condition, Location loc) {
+            super(REPEATUNTIL, loc);
+    		this.left = left;
+    		this.condition = condition;
+        }
+
+    	@Override
+        public void accept(Visitor v) {
+            v.visitRepeatUntil(this);
+        }
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("repeat");
+    		pw.incIndent();
+    		if (left != null) {
+    			left.printTo(pw);
+    		} else {
+    			pw.println("<empty>");
+    		}
+    		condition.printTo(pw);
+    		pw.decIndent();
+    	}
+   }
 
     /**
       * An "if ( ) { } else { }" block
@@ -627,6 +648,133 @@ public abstract class Tree {
     		}
     	}
     }
+    
+    public static class Case extends Tree {
+    	
+    	public Expr value;
+    	public List<Tree> stmt;
+
+        public Case(Expr value, List<Tree> stmt, Location loc) {
+            super(CASE, loc);
+            this.value = value;
+    		this.stmt = stmt;
+        }
+
+    	@Override
+        public void accept(Visitor v) {
+            v.visitCase(this);
+        }
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("case");
+    		pw.incIndent();
+    		value.printTo(pw);
+    		pw.println("caseblock");
+    		pw.incIndent();
+    		if (stmt.size() != 0) {
+    			for(int i = 0;i<stmt.size();i++)
+    			stmt.get(i).printTo(pw);
+    		}
+    		else{
+    			pw.println("<empty>");
+    		}
+    		pw.decIndent();
+    		pw.decIndent();
+    	}
+    }
+    
+    public static class Default extends Tree {
+    	
+    	public List<Tree> stmt;
+
+        public Default(List<Tree> stmt, Location loc) {
+            super(DEFAULT, loc);
+    		this.stmt = stmt;
+        }
+
+    	@Override
+        public void accept(Visitor v) {
+            v.visitDefault(this);
+        }
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("default");
+    		pw.incIndent();
+    		pw.println("caseblock");
+    		pw.incIndent();
+    		if (stmt.size() != 0) {
+    			for(int i = 0;i<stmt.size();i++)
+    			stmt.get(i).printTo(pw);
+    		}
+    		else{
+    			pw.println("<empty>");
+    		}
+    		pw.decIndent();
+    		pw.decIndent();
+    	}
+    }
+    
+    public static class Switch extends Tree {
+    	
+    	public Expr value;
+    	public Tree stmt;
+
+        public Switch(Expr value, Tree stmt, Location loc) {
+            super(SWITCH, loc);
+            this.value = value;
+    		this.stmt = stmt;
+        }
+
+    	@Override
+        public void accept(Visitor v) {
+            v.visitSwitch(this);
+        }
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		pw.println("switch");
+    		pw.incIndent();
+    		value.printTo(pw);
+    		pw.println("switchblock");
+    		pw.incIndent();
+    		if (stmt != null) {
+    			stmt.printTo(pw);
+    		}
+    		else{
+    			pw.println("<empty>");
+    		}
+    		pw.decIndent();
+    		pw.decIndent();
+    	}
+    }
+    
+    public static class SwitchBlock extends Tree {
+    	
+    	public Tree left;
+    	public Tree right;
+
+        public SwitchBlock(int sign, Tree left, Tree right, Location loc) {
+            super(sign, loc);
+            this.left= left;
+    		this.right = right;
+        }
+
+    	@Override
+        public void accept(Visitor v) {
+            v.visitSwitchBlock(this);
+        }
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		if(left != null)
+    			left.printTo(pw);
+    		if(right != null)
+    			right.printTo(pw);
+    	}
+    }
+
 
     /**
       * an expression statement
@@ -730,7 +878,6 @@ public abstract class Tree {
 
     public abstract static class Expr extends Tree {
 
-    	public Type type;
     	public boolean isClass;
     	public boolean usedForRef;
     	
@@ -747,8 +894,6 @@ public abstract class Tree {
     	public Expr receiver;
     	public String method;
     	public List<Expr> actuals;
-    	public Function symbol;
-    	public boolean isArrayLength;
 
         public Apply(Expr receiver, String method, List<Expr> actuals,
     			Location loc) {
@@ -786,7 +931,6 @@ public abstract class Tree {
     public static class NewClass extends Expr {
 
     	public String className;
-    	public Class symbol;
 
         public NewClass(String className, Location loc) {
             super(NEWCLASS, loc);
@@ -908,6 +1052,18 @@ public abstract class Tree {
     		case NOT:
     			unaryOperatorToString(pw, "not");
     			break;
+    		case PREINC:
+    			unaryOperatorToString(pw, "preadd");
+    			break;
+    		case PREDEC:
+    			unaryOperatorToString(pw, "preminus");
+    			break;
+    		case POSTINC:
+    			unaryOperatorToString(pw, "postadd");
+    			break;
+    		case POSTDEC:
+    			unaryOperatorToString(pw, "postminus");
+    			break;
 			}
     	}
    }
@@ -984,6 +1140,40 @@ public abstract class Tree {
     		}
     	}
     }
+    /**
+     * A Trinary operation.
+     */
+    public static class Trinary extends Expr {
+
+    	public Expr left;
+    	public Expr middle;
+    	public Expr right;
+
+        public Trinary(int kind, Expr left, Expr middle, Expr right, Location loc) {
+            super(kind, loc);
+    		this.left = left;
+    		this.middle = middle;
+    		this.right = right;
+        }
+        @Override
+        public void accept(Visitor visitor) {
+    		visitor.visitTrinary(this);
+    	}
+        @Override
+        public void printTo(IndentPrintWriter pw) {
+        	switch(tag)
+        	{
+        	case TRIOP:
+        		pw.println("cond");
+        		pw.incIndent();
+        		left.printTo(pw);
+        		middle.printTo(pw);
+        		right.printTo(pw);
+        		pw.decIndent();
+    			break;
+        	}
+        }
+    }
 
     public static class CallExpr extends Expr {
 
@@ -992,8 +1182,6 @@ public abstract class Tree {
     	public String method;
 
     	public List<Expr> actuals;
-
-    	public Function symbol;
 
     	public boolean isArrayLength;
 
@@ -1085,7 +1273,6 @@ public abstract class Tree {
 
     	public String className;
     	public Expr expr;
-    	public Class symbol;
 
         public TypeCast(String className, Expr expr, Location loc) {
             super(TYPECAST, loc);
@@ -1115,7 +1302,6 @@ public abstract class Tree {
     	
     	public Expr instance;
     	public String className;
-    	public Class symbol;
 
         public TypeTest(Expr instance, String className, Location loc) {
             super(TYPETEST, loc);
@@ -1174,7 +1360,6 @@ public abstract class Tree {
 
     	public Expr owner;
     	public String name;
-    	public Variable symbol;
     	public boolean isDefined;
 
         public Ident(Expr owner, String name, Location loc) {
@@ -1251,8 +1436,6 @@ public abstract class Tree {
     }
 
     public static abstract class TypeLiteral extends Tree {
-    	
-    	public Type type;
     	
     	public TypeLiteral(int tag, Location loc){
     		super(tag, loc);
@@ -1380,8 +1563,28 @@ public abstract class Tree {
         public void visitForLoop(ForLoop that) {
             visitTree(that);
         }
+        
+        public void visitRepeatUntil(RepeatUntil that) {
+            visitTree(that);
+        }
 
         public void visitIf(If that) {
+            visitTree(that);
+        }
+        
+        public void visitCase(Case that) {
+            visitTree(that);
+        }
+        
+        public void visitDefault(Default that) {
+            visitTree(that);
+        }
+        
+        public void visitSwitch(Switch that) {
+            visitTree(that);
+        }
+        
+        public void visitSwitchBlock(SwitchBlock that) {
             visitTree(that);
         }
 
@@ -1418,6 +1621,10 @@ public abstract class Tree {
         }
 
         public void visitBinary(Binary that) {
+            visitTree(that);
+        }
+        
+        public void visitTrinary(Trinary that) {
             visitTree(that);
         }
 
