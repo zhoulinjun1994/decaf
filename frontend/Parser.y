@@ -205,7 +205,7 @@ Stmt		    :	VariableDef
                 	}
                 |   Expr ADDONE ';'
                 	{
-                		$$.stmt = new Tree.Unary(Tree.POSTINC, $1.expr, $2.loc);
+                		$$.stmt = new Tree.Unary(Tree.POSTINC, $1.expr, $1.loc);
                 	}
                 |   SUBONE Expr ';'
                 	{
@@ -213,7 +213,7 @@ Stmt		    :	VariableDef
                 	}
                 |   Expr SUBONE ';'
                 	{
-                		$$.stmt = new Tree.Unary(Tree.POSTDEC, $1.expr, $2.loc);
+                		$$.stmt = new Tree.Unary(Tree.POSTDEC, $1.expr, $1.loc);
                 	}
                 ;
 
@@ -228,6 +228,22 @@ SimpleStmt      :	LValue '=' Expr
                 |	/* empty */
                 	{
                 		$$ = new SemValue();
+                	}
+                |   ADDONE Expr
+                	{
+                		$$.stmt = new Tree.Unary(Tree.PREINC, $2.expr, $1.loc);
+                	}
+                |   Expr ADDONE
+                	{
+                		$$.stmt = new Tree.Unary(Tree.POSTINC, $1.expr, $1.loc);
+                	}
+                |   SUBONE Expr
+                	{
+                		$$.stmt = new Tree.Unary(Tree.PREDEC, $2.expr, $1.loc);
+                	}
+                |   Expr SUBONE
+                	{
+                		$$.stmt = new Tree.Unary(Tree.POSTDEC, $1.expr, $1.loc);
                 	}
                 ;
 
@@ -332,7 +348,7 @@ Expr            :	LValue
                 	}
                 |   Expr ADDONE
                 	{
-                		$$.expr = new Tree.Unary(Tree.POSTINC, $1.expr, $2.loc);
+                		$$.expr = new Tree.Unary(Tree.POSTINC, $1.expr, $1.loc);
                 	}
                 |   SUBONE Expr
                 	{
@@ -340,7 +356,7 @@ Expr            :	LValue
                 	}
                 |   Expr SUBONE
                 	{
-                		$$.expr = new Tree.Unary(Tree.POSTDEC, $1.expr, $2.loc);
+                		$$.expr = new Tree.Unary(Tree.POSTDEC, $1.expr, $1.loc);
                 	}
                 |	'!' Expr
                 	{
@@ -348,7 +364,7 @@ Expr            :	LValue
                 	}
                 |   Expr '?' Expr ':' Expr
                 	{
-                		$$.expr = new Tree.Trinary(Tree.TRIOP, $1.expr, $3.expr, $5.expr, $2.loc);
+                		$$.expr = new Tree.Trinary(Tree.TRIOP, $1.expr, $3.expr, $5.expr, $1.loc);
                 	} 
                 |	READ_INTEGER '(' ')'
                 	{
@@ -438,7 +454,7 @@ IfStmt          :	IF '(' Expr ')' Stmt ElseClause
                 ;
 CaseStmt		: 	CASE Constant ':' StmtList
 					{
-						$$.stmt = new Tree.Case($2.expr, $4.slist, $1.loc);
+						$$.stmt = new Tree.Case($2.expr, $4.slist, $2.loc);
 					}
 				;
 				
@@ -449,7 +465,7 @@ DefaultStmt     :   DEFAULT ':' StmtList
 				;
 SwitchStmt      :	SWITCH '(' Expr ')' '{' SwitchBlock '}'
 					{
-						$$.stmt = new Tree.Switch($3.expr, $6.stmt, $1.loc);
+						$$.stmt = new Tree.Switch($3.expr, $6.stmt, $3.loc);
 					}
 				;
 
