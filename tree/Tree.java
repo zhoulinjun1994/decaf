@@ -111,7 +111,7 @@ public abstract class Tree {
      */
     public static final int CASE = SWITCH + 1;
     
-    public static final int CASESTMT = SWITCH + 1;
+    public static final int CASESTMT = CASE + 1;
     public static final int DEFAULT = CASESTMT + 1;
     public static final int DEFAULTSTMT = DEFAULT + 1;
 
@@ -585,7 +585,7 @@ public abstract class Tree {
     		if (init != null) {
     			init.printTo(pw);
     		} else {
-    			pw.println("<emtpy>");
+    			pw.println("<empty>");
     		}
     		condition.printTo(pw);
     		if (update != null) {
